@@ -245,7 +245,9 @@
   .glow{animation:glowPulse 1s infinite}
   .evflash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.8);background:#1f1e2a;border:2px solid var(--gold);
     border-radius:14px;padding:22px 30px;z-index:60;text-align:center;min-width:360px;opacity:0;transition:.2s;pointer-events:none}
-  .evflash.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  .evflash.show{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto;cursor:pointer}
+  .evflash .tclose{display:block;font-style:normal;font-size:12px;color:var(--muted);margin-top:10px}
+  .modalOv{display:none;position:fixed;inset:0;background:#0008;z-index:59;cursor:pointer}
   .evflash small{color:var(--gold);letter-spacing:3px;font-size:12px}
   .evflash h4{font-size:20px;margin:6px 0}
   .evflash p{color:var(--muted);font-size:13.5px;line-height:1.5}
@@ -375,7 +377,7 @@
       <div class="next">다음 <span class="ar">▶</span></div>
     </div>
     <div id="toast"></div>
-    <div class="evflash" id="evflash"><small>NEW EVIDENCE</small><br><img id="efImg" class="pix" src=""><h4 id="efTitle"></h4><p id="efText"></p></div>
+    <div class="evflash" id="evflash"><small>NEW EVIDENCE</small><br><img id="efImg" class="pix" src=""><h4 id="efTitle"></h4><p id="efText"></p><em class="tclose">클릭하면 닫힘</em></div>
   </section>
 
   <!-- RESULT -->
@@ -393,7 +395,7 @@
 /* =========================================================
    데이터
    ========================================================= */
-const VERSION='v1.7.9'; // 버전 번호: 버전_올리기.py 로 바꿈
+const VERSION='v1.8.0'; // 버전 번호: 버전_올리기.py 로 바꿈
 (function(){ const v=document.getElementById('ver'); if(v) v.textContent=VERSION; })();
 const CHARS = {
   cuzky:   {name:'쿠즈키',  img:'img/cuzky.png',    desc:'유메 길드 리더. 제일 세고, 제일 멋짐.', tag:'유메 길드장 · 제일 세고 제일 멋짐'},
@@ -805,7 +807,7 @@ function openCount(k){ return getQs(k).filter(q=>!isLockedQ(q)).length; }
 function hasNewQ(k){ const b=C.ask[k].length; return ((S.extraQ&&S.extraQ[k])||[]).some((_,j)=>!(S.asked[k]||[]).includes(b+j)); }
 function needTitle(q){ const id=[].concat(q.need).find(x=>S.sceneDone.includes(x)); const s=C.scene.find(x=>x.id===id); return s?s.ev.title:"단서"; }
 function lockedMap(){ const m={}; ORDER.forEach(k=>{ m[k]=getQs(k).map(q=>isLockedQ(q)); }); return m; }
-function announceOpened(was){ const who=ORDER.filter(k=>getQs(k).some((q,i)=>was[k][i]&&!isLockedQ(q))); ORDER.forEach(k=>getQs(k).forEach((q,i)=>{ if(was[k][i]&&!isLockedQ(q)) markNew(k,i); })); if(who.length) setTimeout(()=>{ toastBig(who.map(k=>`<span class="who ${k}">${CHARS[k].name}</span>`).join("·")+"에게 물어볼 것이 생겼다!<small>심문 탭에서 확인</small>"); sfx('note'); render(); },1750); }
+function announceOpened(was){ const who=ORDER.filter(k=>getQs(k).some((q,i)=>was[k][i]&&!isLockedQ(q))); ORDER.forEach(k=>getQs(k).forEach((q,i)=>{ if(was[k][i]&&!isLockedQ(q)) markNew(k,i); })); if(who.length) setTimeout(()=>{ toastBig(who.map(k=>`<span class="who ${k}">${CHARS[k].name}</span>`).join("·")+"에게 물어볼 것이 생겼다!<small>심문 탭에서 확인</small>"); sfx('note'); render(); },150); }
 function qRow(k,q,i){
   if(isLockedQ(q)) return `<div class="q locked">🔒 ??? <span class="qtag">(현장에서 단서를 찾으면 열림)</span></div>`;
   const done=(S.asked[k]||[]).includes(i);
@@ -834,10 +836,14 @@ function renderScene(el){
 }
 function investigate(id){
   const s=C.scene.find(x=>x.id===id); setPortrait(null); showScene(id);
-  say(tag(s.lines,`c${C.id}_scene_${id}`), ()=>{ if(!S.sceneDone.includes(id)){ const was=lockedMap(); S.sceneDone.push(id); S.evidence.push({id, ...s.ev}); flashEv(s.ev,id); sfx('evidence'); announceOpened(was); } showScene(null); render(); });
+  say(tag(s.lines,`c${C.id}_scene_${id}`), ()=>{ const first=!S.sceneDone.includes(id); let was=null; if(first){ was=lockedMap(); S.sceneDone.push(id); S.evidence.push({id, ...s.ev}); sfx('evidence'); } showScene(null); render(); flashEv(s.ev,id,!first,()=>{ if(first) announceOpened(was); }); });
 }
 function showScene(id){ const i=document.getElementById('sceneImg'); if(!id){ i.style.display='none'; idleLeft(); return; } i.src=`img/scene/${id}.png`; i.style.display='block'; idleLeft(); }
-function flashEv(ev,id){ const f=document.getElementById('evflash'); document.getElementById('efImg').src=`img/scene/${id}.png`; document.getElementById('efTitle').textContent=ev.title; document.getElementById('efText').textContent=ev.text; f.classList.add('show'); setTimeout(()=>f.classList.remove('show'),1700); }
+function modalShow(el,onClose){ let ov=el._ov; if(!ov){ ov=document.createElement('div'); ov.className='modalOv'; el.parentNode.insertBefore(ov,el); el._ov=ov; }
+  ov.style.display='block'; el.classList.add('show'); const opened=Date.now();
+  const close=e=>{ if(e){ e.preventDefault(); e.stopPropagation(); } if(Date.now()-opened<400) return; ov.style.display='none'; ov.onclick=null; el.onclick=null; el.classList.remove('show'); if(onClose) onClose(); };
+  ov.onclick=close; el.onclick=close; }
+function flashEv(ev,id,again,onClose){ const f=document.getElementById('evflash'); f.querySelector('small').textContent=again?'EVIDENCE':'NEW EVIDENCE'; document.getElementById('efImg').src=`img/scene/${id}.png`; document.getElementById('efTitle').textContent=ev.title; document.getElementById('efText').textContent=ev.text; modalShow(f,onClose); }
 
 let askWho=null;
 function renderAsk(el){
