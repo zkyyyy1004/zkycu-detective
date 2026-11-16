@@ -1,0 +1,1 @@
+investigate.mp3 / reveal.mp3 / confession.mp3 를 여기 넣으면 합성 BGM 대신 재생됩니다.
