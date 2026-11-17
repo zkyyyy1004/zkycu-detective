@@ -399,7 +399,7 @@
 /* =========================================================
    데이터
    ========================================================= */
-const VERSION='v1.8.1'; // 버전 번호: 버전_올리기.py 로 바꿈
+const VERSION='v1.8.2'; // 버전 번호: 버전_올리기.py 로 바꿈
 (function(){ const v=document.getElementById('ver'); if(v) v.textContent=VERSION; })();
 const CHARS = {
   cuzky:   {name:'쿠즈키',  img:'img/cuzky.png',    desc:'유메 길드 리더. 제일 세고, 제일 멋짐.', tag:'유메 길드장 · 제일 세고 제일 멋짐'},
@@ -1022,6 +1022,23 @@ const BGM={
     {type:'triangle', vol:.26, legato:.95, notes:[[0,69,8],[8,72,4],[12,76,4],[16,74,12],[28,71,4],[32,67,8],[40,71,4],[44,76,4],[48,72,16]]},
   ]},
 };
+// 시즌별 악기 추가: season:2 = 4화부터, season:3 = 7화부터 (큰 틀은 그대로, 층만 더함)
+function oct(ns,d){ return ns.map(n=>[n[0],n[1]+d,n[2]]); }
+BGM.investigate.tracks.push(
+  {season:2, drum:'hat', vol:.03, steps:[2,6,10,14]},
+  {season:2, type:'sine', vol:.10, notes:[[0,81,4],[8,76,2],[16,77,4],[24,72,2],[32,74,4],[40,77,2],[48,80,4],[56,83,2]]},
+  {season:3, drum:'kick', vol:.2, steps:[0,8]},
+  {season:3, type:'square', vol:.04, legato:.6, notes:[[0,72,6],[8,71,4],[12,69,4],[16,69,8],[24,65,8],[32,69,6],[38,74,6],[44,72,4],[48,64,8],[56,68,4],[60,71,4]]});
+BGM.reveal.tracks.push(
+  {season:2, drum:'hat', vol:.025, steps:[1,3,5,7,9,11,13,15]},
+  {season:2, type:'triangle', vol:.08, notes:oct(BGM.reveal.tracks[1].notes,-12)},
+  {season:3, type:'sawtooth', vol:.05, legato:.4, notes:[[0,86,1],[8,86,1],[16,86,1],[24,86,1],[32,82,1],[40,82,1],[48,85,1],[56,85,1]]},
+  {season:3, drum:'kick', vol:.25, steps:[14]});
+BGM.confession.tracks.push(
+  {season:2, type:'sine', vol:.07, notes:[[8,84,8],[24,83,8],[40,79,8],[56,81,8]]},
+  {season:3, type:'sine', vol:.05, notes:oct(BGM.confession.tracks[1].notes,12)},
+  {season:3, drum:'hat', vol:.02, steps:[8]});
+let bgmSea=1;
 Object.values(BGM).forEach(T=>{ T.map={}; T.tracks.forEach(tr=>{ if(tr.notes) tr.notes.forEach(n=>{ (T.map[n[0]]=T.map[n[0]]||[]).push([tr,n]); }); }); });
 
 function bgmTone(f,d,type,vol,t){ const a=AC, o=a.createOscillator(), g=a.createGain(); o.type=type; o.frequency.setValueAtTime(f,t); g.gain.setValueAtTime(.0001,t); g.gain.linearRampToValueAtTime(vol,t+.012); g.gain.setTargetAtTime(.0001,t+Math.max(.02,d*.85),.05); o.connect(g).connect(bgmBus); o.start(t); o.stop(t+d+.3); }
@@ -1035,8 +1052,8 @@ function bgmDrum(kind,t,vol){ const a=AC;
 }
 function bgmTick(){ const a=AC; if(!a||!bgmCur||!bgmBus) return; const T=BGM[bgmCur], sp=60/T.bpm/4;
   while(bgmNext < a.currentTime+.15){ const st=bgmStep%T.len;
-    (T.map[st]||[]).forEach(([tr,n])=>bgmTone(m2f(n[1]), n[2]*sp*(tr.legato||.9), tr.type, tr.vol, bgmNext));
-    T.tracks.forEach(tr=>{ if(tr.drum && tr.steps.includes(st%16)) bgmDrum(tr.drum,bgmNext,tr.vol); });
+    (T.map[st]||[]).forEach(([tr,n])=>{ if((tr.season||1)<=bgmSea) bgmTone(m2f(n[1]), n[2]*sp*(tr.legato||.9), tr.type, tr.vol, bgmNext); });
+    T.tracks.forEach(tr=>{ if(tr.drum && (tr.season||1)<=bgmSea && tr.steps.includes(st%16)) bgmDrum(tr.drum,bgmNext,tr.vol); });
     bgmStep++; bgmNext+=sp; }
 }
 function bgmStop(){
@@ -1047,7 +1064,7 @@ function bgmStop(){
   if(bgmFile){ const f=bgmFile; bgmFile=null; let v=f.volume; const iv=setInterval(()=>{ v-=.05; if(v<=0){ clearInterval(iv); f.pause(); } else f.volume=v; },40); }
   bgmCur=null;
 }
-function bgmSynth(name){ const a=ac(); if(!a) return; bgmCur=name; bgmBus=a.createGain(); bgmBus.gain.setValueAtTime(.0001,a.currentTime); bgmBus.gain.setTargetAtTime(BGM_VOL*(bgmDucked?.35:1),a.currentTime,.3); bgmBus.connect(a.destination); bgmStep=0; bgmNext=a.currentTime+.08; bgmTick(); bgmTimer=setInterval(bgmTick,25); }
+function bgmSynth(name){ const a=ac(); if(!a) return; bgmCur=name; try{ bgmSea=(C&&C.id)?(C.id<=3?1:C.id<=6?2:3):1; }catch(e){ bgmSea=1; } bgmBus=a.createGain(); bgmBus.gain.setValueAtTime(.0001,a.currentTime); bgmBus.gain.setTargetAtTime(BGM_VOL*(bgmDucked?.35:1),a.currentTime,.3); bgmBus.connect(a.destination); bgmStep=0; bgmNext=a.currentTime+.08; bgmTick(); bgmTimer=setInterval(bgmTick,25); }
 function bgmStart(name){
   bgmCur=name; const tok=++bgmTok;
   if(bgmFileOk[name]===false){ bgmSynth(name); return; }
@@ -1068,6 +1085,5 @@ window.addEventListener('resize',fit); fit();
 const FALLBACK_ICON='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#2a2635"/><text x="32" y="44" font-size="34" text-anchor="middle">🔍</text></svg>');
 document.addEventListener('error',e=>{ const t=e.target; if(t&&t.tagName==='IMG'&&t.classList.contains('pix')&&t.getAttribute('src')!==FALLBACK_ICON) t.src=FALLBACK_ICON; },true);
 </script>
-<script data-goatcounter="https://zkyzky.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
