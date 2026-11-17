@@ -239,6 +239,9 @@
   #toastOv{display:none;position:fixed;inset:0;background:#0008;z-index:59;cursor:pointer}
   #toast.big .tclose{display:block;font-style:normal;font-size:12px;font-weight:400;color:var(--muted);margin-top:8px}
   #toast.big small{display:block;font-size:14px;font-weight:600;color:var(--gold);margin-top:4px}
+  /* 증거 팝업과 질문 알림 팝업 같은 크기 */
+  #toast.big,.evflash{width:440px;min-width:0;max-width:none;box-sizing:border-box;padding:22px 30px;background:#1f1e2a;white-space:normal;word-break:keep-all}
+  #toast.big{top:50%}
   @keyframes tabBlink{50%{color:var(--gold);background:#3a3320}}
   #tabs button.blink{animation:tabBlink 1s infinite}
   @keyframes glowPulse{50%{box-shadow:0 0 0 2px var(--gold),0 0 14px var(--gold)}}
@@ -296,6 +299,7 @@
   @media (max-width:899px){
     #toast{position:fixed;top:60px}
     .evflash{position:fixed;min-width:0;width:86%;padding:16px}
+    #toast.big{position:fixed;top:50%;width:86%;padding:16px;font-size:20px}
     .casecard{min-height:0}
     #dlg .prev{right:74px;bottom:3px;font-size:12px;padding:5px 8px}
     body{overflow:visible}
@@ -395,7 +399,7 @@
 /* =========================================================
    데이터
    ========================================================= */
-const VERSION='v1.8.0'; // 버전 번호: 버전_올리기.py 로 바꿈
+const VERSION='v1.8.1'; // 버전 번호: 버전_올리기.py 로 바꿈
 (function(){ const v=document.getElementById('ver'); if(v) v.textContent=VERSION; })();
 const CHARS = {
   cuzky:   {name:'쿠즈키',  img:'img/cuzky.png',    desc:'유메 길드 리더. 제일 세고, 제일 멋짐.', tag:'유메 길드장 · 제일 세고 제일 멋짐'},
